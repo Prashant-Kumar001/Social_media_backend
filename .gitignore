@@ -1,0 +1,53 @@
+# 📦 Node modules
+node_modules/
+
+# 🔐 Environment variables
+.env
+.env.*.local
+
+# 🏗 Build output
+dist/
+build/
+
+# 🧪 Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 📂 OS files
+.DS_Store
+Thumbs.db
+
+# 🧠 IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 📦 TypeScript cache
+*.tsbuildinfo
+
+# 🔥 Coverage (testing)
+coverage/
+
+# 📸 Uploads (if storing locally)
+uploads/
+public/uploads/
+
+# 🗂 Temp files
+tmp/
+temp/
+
+# 🔑 Keys / certificates
+*.pem
+*.key
+
+# 🚀 Misc
+.cache/
+.eslintcache
+
+test
+package-lock.json
