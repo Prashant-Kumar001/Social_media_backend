@@ -1,13 +1,12 @@
 import app from "./app";
 import { env } from "./config/env";
-import  logger  from "./config/logger";
 
 const server = app.listen(env.PORT, () => {
-    logger.info(`🚀 Server running on port ${env.PORT} `);
+    console.log(`⚡️[server]: Server is running at http://localhost:${env.PORT}`);
 });
 
 const shutdown = (signal: string) => {
-    logger.info(`⚠️  ${signal} received. Shutting down...`);
+    console.log(`⚡️[server]: Received ${signal}. Closing server...`);
     server.close(() => {
         process.exit(0);
     });
