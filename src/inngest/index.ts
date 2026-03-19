@@ -7,39 +7,50 @@ const syncUserCreation = inngest.createFunction(
     { id: "sync-user-creation", triggers: [{ event: "clerk/user.created" }] },
 
     async ({ event }) => {
-        const { id, first_name, last_name, email_address, image_url } = event.data;
-        console.log(event.data);
+        const { id, first_name, last_name, email_addresses, image_url } = event.data;
 
-        
-        let username = email_address[0].email_address.split("@")[0];
-        const user = await User.findOne({ username });
-        if (user) {
+        const email = email_addresses?.[0]?.email_address;
+
+        if (!email) {
+            throw new Error("Email not found in Clerk payload");
+        }
+
+        let username = email.split("@")[0];
+
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
             username = username + Math.floor(Math.random() * 1000);
         }
+
         const userData = {
             _id: id,
-            email: email_address[0].email_address,
-            full_name: `${first_name} ${last_name}`,
+            email,
+            full_name: `${first_name || ""} ${last_name || ""}`,
             profile_picture: image_url,
             username,
-        }
+        };
+
         await User.create(userData);
-    },
+    }
 );
+
 const syncUserUpdation = inngest.createFunction(
     { id: "sync-user-updation", triggers: [{ event: "clerk/user.updated" }] },
 
     async ({ event }) => {
-        const { id, first_name, last_name, email_address, image_url } = event.data;
-        const userData = {
-            email: email_address[0].email_address,
-            full_name: `${first_name} ${last_name}`,
-            profile_picture: image_url,
-        }
-        await User.findOneAndUpdate({ _id: id }, userData);
+        const { id, first_name, last_name, email_addresses, image_url } = event.data;
 
+        const email = email_addresses?.[0]?.email_address;
 
-    },
+        await User.findOneAndUpdate(
+            { _id: id },
+            {
+                email,
+                full_name: `${first_name || ""} ${last_name || ""}`,
+                profile_picture: image_url,
+            }
+        );
+    }
 );
 
 const syncUserDeletion = inngest.createFunction(
@@ -54,6 +65,5 @@ const syncUserDeletion = inngest.createFunction(
 export const functions = [
     syncUserCreation,
     syncUserUpdation,
-    syncUserDeletion
-
+    syncUserDeletion,
 ];
