@@ -18,7 +18,7 @@ connectDB()
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-
+app.set('trust proxy', 1);
 app.use(
     rateLimit({
         windowMs: 15 * 60 * 1000,
