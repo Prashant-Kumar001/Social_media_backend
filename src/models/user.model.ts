@@ -1,8 +1,32 @@
-// src/models/user.model.ts
 
-import mongoose, { Mongoose, ObjectId, Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-const userSchema: Schema = new Schema(
+
+interface IUser {
+    _id: string;
+    email: string;
+    username: string;
+    location?: string;
+    full_name?: string;
+    bio?: string;
+    profile_picture?: {
+        url: string;
+        fileId: string;
+    };
+    cover_photo?: {
+        url: string;
+        fileId: string;
+    };
+    followers?: string[];
+    following?: string[];
+    connections?: string[];
+    posts?: string[];
+    is_verified?: boolean;
+    role: "user" | "admin";
+}
+
+
+const userSchema: Schema = new Schema<IUser>(
     {
         _id: {
             type: String,
@@ -28,12 +52,24 @@ const userSchema: Schema = new Schema(
             default: "",
         },
         profile_picture: {
-            type: String,
-            default: "",
+            url: {
+                type: String,
+                default: "",
+            },
+            fileId: {
+                type: String,
+                default: "",
+            }
         },
         cover_photo: {
-            type: String,
-            default: "",
+            url: {
+                type: String,
+                default: "",
+            },
+            fileId: {
+                type: String,
+                default: "",
+            }
         },
         location: {
             type: String,
@@ -41,26 +77,38 @@ const userSchema: Schema = new Schema(
         },
         followers: [
             {
-                type: mongoose.Schema.Types.ObjectId,
+                type: String,
                 ref: "User",
             },
         ],
         following: [
             {
-                type: mongoose.Schema.Types.ObjectId,
+                type: String,
                 ref: "User",
             },
         ],
         connections: [
             {
-                type: mongoose.Schema.Types.ObjectId,
+                type: String,
                 ref: "User",
+            },
+        ],
+        posts: [
+            {
+                type: String,
+                ref: "Post",
             },
         ],
 
         is_verified: {
             type: Boolean,
             default: false,
+        },
+
+        role: {
+            type: String,
+            enum: ["user", "admin"],
+            default: "user",
         },
     },
     {
@@ -69,6 +117,6 @@ const userSchema: Schema = new Schema(
     }
 );
 
-const User = mongoose.model("User", userSchema);
+const User = mongoose.model<IUser>("User", userSchema);
 
 export default User;

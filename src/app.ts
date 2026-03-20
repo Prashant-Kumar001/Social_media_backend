@@ -4,13 +4,17 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { serve } from "inngest/express";
 import { inngest, functions } from "./inngest"
+import { clerkMiddleware } from '@clerk/express'
+import dotenv from "dotenv";
 
 import healthRouter from "./routes/health.route";
+import userRouter from "./routes/user.route";
 import { errorHandler } from "./middlewares/error.middleware";
 import { notFound } from "./middlewares/notFound.middleware";
 import connectDB from "./config/db";
 
 const app = express();
+dotenv.config();
 
 connectDB()
 
@@ -25,8 +29,8 @@ app.use(
         max: 100,
     })
 );
-
-
+app.use(clerkMiddleware())
+app.use("/uploads", express.static("uploads"));
 
 
 app.get("/", (req, res) => {
@@ -37,7 +41,13 @@ app.get("/", (req, res) => {
     });
 });
 
+
+
+
 app.use("/api/inngest", serve({ client: inngest, functions }));
+app.use("/api/v1/user", userRouter);
+
+
 
 app.use("/health", healthRouter);
 
