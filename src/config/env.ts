@@ -32,3 +32,4 @@ export const env = {
     IMAGEKIT_PUBLIC_KEY: parsed.data.IMAGEKIT_PUBLIC_KEY,
     IMAGEKIT_URL_ENDPOINT: parsed.data.IMAGEKIT_URL_ENDPOINT
 };
+  
