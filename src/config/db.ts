@@ -1,10 +1,9 @@
 import mongoose from "mongoose";
-import { env } from "./env";
 const connectDB = async (): Promise<void> => {
     try {
         mongoose.set("strictQuery", true);
 
-        const conn = await mongoose.connect(env.DATABASE_URL as string, {
+        const conn = await mongoose.connect(process.env.DATABASE_URL as string, {
             dbName: "social_app",
         });
 
