@@ -1,6 +1,7 @@
 import { Inngest } from "inngest";
 import User from "../models/user.model";
-
+import dotenv from "dotenv";
+dotenv.config();
 export const inngest = new Inngest({
   id: "my-app",
   signingKey: process.env.INNGEST_SIGNING_KEY,
