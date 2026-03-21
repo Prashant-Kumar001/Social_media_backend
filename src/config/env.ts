@@ -22,14 +22,13 @@ if (!parsed.success) {
 }
 
 export const env = {
-    PORT: Number(parsed.data.PORT),
-    NODE_ENV: parsed.data.NODE_ENV,
-    DATABASE_URL: parsed.data.DATABASE_URL,
-    INNGEST_SIGNING_KEY: parsed.data.INNGEST_SIGNING_KEY,
-    INNGEST_EVENT_KEY: parsed.data.INNGEST_EVENT_KEY,
-    CLIENT_URL: parsed.data.CLIENT_URL,
-    IMAGEKIT_PRIVATE_KEY: parsed.data.IMAGEKIT_PRIVATE_KEY,
-    IMAGEKIT_PUBLIC_KEY: parsed.data.IMAGEKIT_PUBLIC_KEY,
-    IMAGEKIT_URL_ENDPOINT: parsed.data.IMAGEKIT_URL_ENDPOINT
+    PORT: Number(process.env.PORT),
+    NODE_ENV: process.env.NODE_ENV,
+    DATABASE_URL: process.env.DATABASE_URL,
+    INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
+    INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
+    CLIENT_URL: process.env.CLIENT_URL,
+    IMAGEKIT_PRIVATE_KEY: process.env.IMAGEKIT_PRIVATE_KEY,
+    IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY,
+    IMAGEKIT_URL_ENDPOINT: process.env.IMAGEKIT_URL_ENDPOINT
 };
-  

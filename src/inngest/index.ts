@@ -4,8 +4,8 @@ import dotenv from "dotenv";
 dotenv.config();
 export const inngest = new Inngest({
   id: "my-app",
-  signingKey: process.env.INNGEST_SIGNING_KEY,
-  eventKey: process.env.INNGEST_EVENT_KEY,
+    signingKey: process.env.INNGEST_SIGNING_KEY,
+    eventKey: process.env.INNGEST_EVENT_KEY,
 });
 
 const syncUserCreation = inngest.createFunction(
