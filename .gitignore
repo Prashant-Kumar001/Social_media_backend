@@ -51,3 +51,4 @@ temp/
 
 test
 package-lock.json
+.env.file.env

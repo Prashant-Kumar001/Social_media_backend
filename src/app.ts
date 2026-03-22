@@ -10,13 +10,17 @@ import dotenv from "dotenv";
 import healthRouter from "./routes/health.route";
 import userRouter from "./routes/user.route";
 import connectionRouter from "./routes/connection.route";
+import postRouter from "./routes/post.route";
 import { errorHandler } from "./middlewares/error.middleware";
 import { notFound } from "./middlewares/notFound.middleware";
 import connectDB from "./config/db";
 import User from "./models/user.model";
 
 const app = express();
-dotenv.config();
+dotenv.config({
+    path: "./.env",
+    quiet: true
+});
 
 connectDB()
 
@@ -52,6 +56,7 @@ app.get("/", async (req, res) => {
 app.use("/api/inngest", serve({ client: inngest, functions }));
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/connection", connectionRouter);
+app.use("/api/v1/post", postRouter);
 
 
 
