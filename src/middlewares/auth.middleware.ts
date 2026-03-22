@@ -17,7 +17,9 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
 export const adminOnly = async (req: Request, res: Response, next: NextFunction) => {
     const { userId } = req.auth() as { userId: string };
-    const isAdmin: boolean = userId === process.env.ADMIN_ID;
+    console.log(userId);
+
+    const isAdmin: boolean = String(userId) === String(process.env.ADMIN_ID);
     if (!isAdmin) {
         return res.status(401).json({
             success: false,

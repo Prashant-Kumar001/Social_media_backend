@@ -1,5 +1,5 @@
 
-import mongoose, { Schema } from "mongoose";
+import mongoose, { ObjectId, Schema } from "mongoose";
 
 
 interface IUser {
@@ -20,7 +20,7 @@ interface IUser {
     followers?: string[];
     following?: string[];
     connections?: string[];
-    posts?: string[];
+    posts?: mongoose.Types.ObjectId[];
     is_verified?: boolean;
     role: "user" | "admin";
 }
@@ -95,7 +95,7 @@ const userSchema: Schema = new Schema<IUser>(
         ],
         posts: [
             {
-                type: String,
+                type: mongoose.Schema.Types.ObjectId,
                 ref: "Post",
             },
         ],

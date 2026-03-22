@@ -5,6 +5,7 @@ import {
   deleteFromImageKit,
   uploadToImageKit,
 } from "../utils/uploadFileToTheImageKit";
+import Post from "../models/post.model";
 
 export const updateUserData = expressAsyncHandler(async (req, res) => {
   const userId = req.userId;
@@ -153,11 +154,17 @@ export const discoverUser = expressAsyncHandler(async (req, res) => {
 
 export const getUserById = expressAsyncHandler(async (req, res) => {
   const userId = req.params.id;
-  const user = await User.findById(userId);
+  const [user, posts] = await Promise.all([
+    User.findById(userId),
+    Post.find({ user: userId }).sort({ createdAt: -1 }),
+  ])
   if (!user) {
     throw new ApiError(404, "User not found");
   }
-  res.status(200).json(user);
+  if (!posts) {
+    throw new ApiError(404, "Posts not found");
+  }
+  res.status(200).json({ user, posts });
 });
 
 export const followUser = expressAsyncHandler(async (req, res) => {

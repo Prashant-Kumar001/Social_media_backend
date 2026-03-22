@@ -1,46 +1,54 @@
 import multer from "multer";
-import path from "path";
 import fs from "fs";
+import path from "path";
 
 const createFolder = (folder: string) => {
-    if (!fs.existsSync(folder)) {
-        fs.mkdirSync(folder, { recursive: true });
-    }
+  if (!fs.existsSync(folder)) {
+    fs.mkdirSync(folder, { recursive: true });
+  }
 };
 
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        let uploadPath = "uploads/";
+  destination: (req, file, cb) => {
+    let uploadPath = "uploads/";
 
-        if (file.fieldname === "profile") {
-            uploadPath += "profile/";
-        } else if (file.fieldname === "cover") {
-            uploadPath += "cover/";
-        }
+    // Separate folders (clean structure 🔥)
+    if (file.mimetype.startsWith("image/")) {
+      uploadPath += "images/";
+    } else if (file.mimetype.startsWith("video/")) {
+      uploadPath += "videos/";
+    }
 
-        createFolder(uploadPath);
-        cb(null, uploadPath);
-    },
+    createFolder(uploadPath);
+    cb(null, uploadPath);
+  },
 
-    filename: (req, file, cb) => {
-        const uniqueName =
-            Date.now() + "-" + file.originalname.replace(/\s/g, "");
-        cb(null, uniqueName);
-    },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + "-" + file.originalname.replace(/\s/g, "");
+    cb(null, uniqueName);
+  },
 });
 
+const allowedTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+];
+
 const fileFilter: multer.Options["fileFilter"] = (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
-        cb(null, true);
-    } else {
-        cb(new Error("Only images are allowed"));
-    }
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only JPG, PNG, WEBP images and MP4/WEBM videos are allowed"));
+  }
 };
 
 export const upload = multer({
-    storage,
-    fileFilter,
-    limits: {
-        fileSize: 5 * 1024 * 1024, 
-    },
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 50 * 1024 * 1024,
+  },
 });

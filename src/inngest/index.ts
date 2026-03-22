@@ -3,6 +3,8 @@ import User from "../models/user.model";
 import dotenv from "dotenv";
 import { Connection } from "../models/connections.model";
 import { sendMail } from "../utils/sendMail";
+import Story from "../models/story.model";
+import Message from "../models/message.model";
 dotenv.config();
 export const inngest = new Inngest({
   id: "my-app",
@@ -78,7 +80,7 @@ const syncUserDeletion = inngest.createFunction(
 const sendConnectionsRequestReminder = inngest.createFunction(
   {
     id: "send-connections-request-reminder",
-    triggers: [{ event: "clerk/user.created" }],
+    triggers: [{ event: "app/connections.requested" }],
   },
 
   async ({ event, step }) => {
@@ -219,9 +221,94 @@ const sendConnectionsRequestReminder = inngest.createFunction(
   },
 );
 
+const in24DeleteStory = inngest.createFunction(
+  { id: "story-delete", triggers: [{ event: "app/story.deleted" }] },
+  async ({ event, step }) => {
+    const { storyId } = event.data;
+    const in24Hours = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
+    await step.sleepUntil("wait-for-24-hours", in24Hours);
+    await step.run("delete-story", async () => {
+      await Story.findByIdAndDelete(storyId);
+
+    });
+    return { success: true };
+  },
+);
+
+const sendNotificationsOnUnseenMessages = inngest.createFunction(
+  {
+    id: "send-notifications-on-unseen-messages",
+    triggers: [{ event: "app/unseen-messages" }, {
+      cron: "TZ=America/New_York 0 9 * * *", // 
+    }],
+  },
+  async ({ step }) => {
+    const message = await Message.find({ seen: false }).populate("to_user_id");
+
+    const unSeenMessage: { [key: string]: number } = {}
+
+    if (message) {
+      (message && message.map(message => {
+        unSeenMessage[message?.to_user_id?._id as string] = (unSeenMessage[message?.to_user_id?._id] || 0) + 1
+      }))
+
+      for (const key in unSeenMessage) {
+        const user = await User.findById(key)
+
+        const subject = `You have ${unSeenMessage[key]} new messages`;
+
+        const html = `
+          <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>Hey ${user?.full_name || "there"} 👋</h2>
+
+            <p>
+              You have ${unSeenMessage[key]} new messages.
+            </p>
+
+            <div style="margin-top: 20px;">
+              <a 
+                href="${process.env.CLIENT_URL}/messages"
+                style="
+                  background-color: #4CAF50;
+                  color: white;
+                  padding: 10px 16px;
+                  text-decoration: none;
+                  border-radius: 5px;
+                  display: inline-block;
+                "
+              >
+                View Messages
+              </a>
+            </div>
+          
+            <p style="margin-top: 30px; font-size: 12px; color: gray;">
+              Click <a href="${process.env.CLIENT_URL}/messages">here</a> to view your messages
+
+            </p>
+            <p style="margin-top: 30px; font-size: 12px; color: gray;">
+              If you already responded, you can ignore this email.
+            </p>
+          </div>
+        `;
+
+        await sendMail({
+          to: user?.email!,
+          subject,
+          html,
+        });
+
+      }
+
+      return { success: true, message: "Notifications sent successfully" };
+    }
+  },
+)
+
 export const functions = [
   syncUserCreation,
   syncUserUpdation,
   syncUserDeletion,
   sendConnectionsRequestReminder,
+  in24DeleteStory,
+  sendNotificationsOnUnseenMessages
 ];

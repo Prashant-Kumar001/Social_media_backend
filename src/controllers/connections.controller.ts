@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import User from "../models/user.model";
 import { ApiError } from "../utils/ApiError";
 import { Connection } from "../models/connections.model";
+import { inngest } from "../inngest";
 
 export const sendConnectionRequest = asyncHandler(async (req, res) => {
     const userId = req.userId;
@@ -69,6 +70,11 @@ export const sendConnectionRequest = asyncHandler(async (req, res) => {
         status: "pending",
     });
 
+
+    await inngest.send({
+        name: "app/connections.requested",
+        data: { connectionId: newConnection._id },
+    })
     res.status(201).json({
         success: true,
         message: "Connection request sent successfully",
