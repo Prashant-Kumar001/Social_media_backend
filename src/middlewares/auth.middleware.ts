@@ -10,7 +10,6 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     }
 
     req.userId = userId;
-
     next();
 };
 

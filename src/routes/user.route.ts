@@ -20,7 +20,6 @@ router.post("/follow", followUser)
 router.post("/unfollow", unFollowUser)
 
 // admin
-
 router.get("/all/accounts", adminOnly, getAllUsers)
 
-export default router;
+export default router; 

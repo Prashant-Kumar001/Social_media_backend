@@ -122,16 +122,28 @@ export const updateUserData = expressAsyncHandler(async (req, res) => {
     { new: true, runValidators: true },
   );
 
-  res.status(200).json(updatedUser);
+  res.status(200).json({
+    success: true,
+    message: "User updated successfully",
+    data: updatedUser,
+  });
 });
 
 export const getUserData = expressAsyncHandler(async (req, res) => {
   const userId = req.userId;
+  if (!userId) {
+    throw new ApiError(400, "User id is required");
+  } 
+
   const user = await User.findById(userId);
   if (!user) {
     throw new ApiError(404, "User not found");
   }
-  res.status(200).json(user);
+  res.status(200).json({
+    success: true,
+    message: "User found successfully",
+    user,
+  });
 });
 
 export const discoverUser = expressAsyncHandler(async (req, res) => {
@@ -156,7 +168,7 @@ export const getUserById = expressAsyncHandler(async (req, res) => {
   const userId = req.params.id;
   const [user, posts] = await Promise.all([
     User.findById(userId),
-    Post.find({ user: userId }).sort({ createdAt: -1 }),
+    Post.find({ user: userId }).sort({ createdAt: -1 }).populate("user"),
   ])
   if (!user) {
     throw new ApiError(404, "User not found");
@@ -164,7 +176,7 @@ export const getUserById = expressAsyncHandler(async (req, res) => {
   if (!posts) {
     throw new ApiError(404, "Posts not found");
   }
-  res.status(200).json({ user, posts });
+  res.status(200).json({ success: true, message: "User found successfully", user, posts });
 });
 
 export const followUser = expressAsyncHandler(async (req, res) => {
