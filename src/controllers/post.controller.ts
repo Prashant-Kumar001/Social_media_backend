@@ -17,6 +17,8 @@ export const addPost = asyncHandler(async (req, res) => {
         [fieldname: string]: Express.Multer.File[];
     };
 
+    console.log("files", files);
+
     const post_images =
         files?.post_image?.map((file) => ({
             path: file.path,

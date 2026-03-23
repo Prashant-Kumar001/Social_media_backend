@@ -125,7 +125,7 @@ export const updateUserData = expressAsyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: "User updated successfully",
-    data: updatedUser,
+    user: updatedUser,
   });
 });
 

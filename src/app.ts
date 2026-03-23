@@ -6,6 +6,7 @@ import { serve } from "inngest/express";
 import { inngest, functions } from "./inngest";
 import dotenv from "dotenv";
 import { clerkMiddleware } from '@clerk/express'
+import morgan from 'morgan';
 
 import healthRouter from "./routes/health.route";
 import userRouter from "./routes/user.route";
@@ -37,7 +38,7 @@ app.use(
 
 app.use(express.json());
 app.set("trust proxy", 1);
-
+app.use(morgan('dev'));
 app.use(
     rateLimit({
         windowMs: 15 * 60 * 1000,

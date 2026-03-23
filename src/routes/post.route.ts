@@ -6,7 +6,7 @@ import { addPost, getFeedPosts, likePost } from "../controllers/post.controller"
 const router = express.Router();
 
 router.post(
-  "/add",
+  "/create",
   protect,
   upload.fields([{ name: "post_image", maxCount: 5 }]),
   addPost,

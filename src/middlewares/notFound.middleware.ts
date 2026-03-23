@@ -5,5 +5,8 @@ export const notFound = (_req: Request, res: Response) => {
         success: false,
         message: "Route not found",
         route: _req.originalUrl,
+        method: _req.method,
+        statusCode: 404,
+        data: null,
     });
 };
