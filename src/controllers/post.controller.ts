@@ -17,7 +17,6 @@ export const addPost = asyncHandler(async (req, res) => {
         [fieldname: string]: Express.Multer.File[];
     };
 
-    console.log("files", files);
 
     const post_images =
         files?.post_image?.map((file) => ({
@@ -73,24 +72,48 @@ export const addPost = asyncHandler(async (req, res) => {
 
 export const getFeedPosts = asyncHandler(async (req, res) => {
     const userId = req.userId;
-    const user = await User.findOne({
-        _id: userId,
-    });
+
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(20, parseInt(req.query.limit as string) || 10); 
+    const skip = (page - 1) * limit;
+
+    const user = await User.findById(userId).select("connections following").lean();
 
     const userIds = [
         userId,
-        ...(user?.connections ?? []),
-        ...(user?.following ?? []),
+        ...(user?.connections || []),
+        ...(user?.following || []),
     ];
+    
 
-    const filteredUserIds = userIds.filter((id) => id !== undefined);
+    const uniqueUserIds = [...new Set(userIds)] as string[];
 
+    // ✅ fetch one extra post to check next page
+    const posts = await Post.find({ user: { $in: uniqueUserIds } })
+        .populate("user", "full_name username profile_picture")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit + 1) 
+        .lean();
 
+    const hasNextPage = posts.length > limit;
 
-    const posts = await Post.find({ user: { $in: filteredUserIds } })
-        .populate("user")
-        .sort({ createdAt: -1 });
-    res.status(200).json(posts);
+    if (hasNextPage) posts.pop();
+
+    res.status(200).json({
+        success: true,
+
+        pagination: {
+            page,
+            limit,
+            hasNextPage,
+            hasPrevPage: page > 1,
+            nextPage: hasNextPage ? page + 1 : null,
+            prevPage: page > 1 ? page - 1 : null,
+        },
+
+        posts,
+    });
 });
 
 
