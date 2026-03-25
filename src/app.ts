@@ -11,7 +11,7 @@ import morgan from 'morgan';
 import healthRouter from "./routes/health.route";
 import userRouter from "./routes/user.route";
 import connectionRouter from "./routes/connection.route";
-import storyRouter from "./routes/story.route"; 
+import storyRouter from "./routes/story.route";
 import postRouter from "./routes/post.route";
 import messageRouter from "./routes/message.route";
 
@@ -31,7 +31,11 @@ connectDB();
 app.use(helmet());
 app.use(
     cors({
-        origin: ["http://localhost:5173", "http://localhost:4173"],
+        origin: [
+            process.env.CLIENT_URL as string,
+            process.env.CLIENT_URL_LOCAL as string,
+            "http://localhost:4173",
+        ],
         credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     })
@@ -40,12 +44,12 @@ app.use(
 app.use(express.json());
 app.set("trust proxy", 1);
 app.use(morgan('dev'));
-// app.use(
-//     rateLimit({
-//         windowMs: 15 * 60 * 1000, //
-//         max: 100,
-//     })
-// );
+app.use(
+    rateLimit({
+        windowMs: 15 * 60 * 1000, //
+        max: 500,
+    })
+);
 app.use(clerkMiddleware())
 
 
@@ -67,7 +71,7 @@ app.use("/api/v1/message", messageRouter);
 
 app.use("/health", healthRouter);
 
- app.use(notFound);
+app.use(notFound);
 app.use(errorHandler);
 
 export default app;
