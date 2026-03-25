@@ -148,7 +148,7 @@ export const getUserData = expressAsyncHandler(async (req, res) => {
 
 export const discoverUser = expressAsyncHandler(async (req, res) => {
   const userId = req.userId;
-  const { input } = req.body;
+  const { input } = req.query as { input: string };
 
   const Users = await User.find({
     $or: [
@@ -161,7 +161,11 @@ export const discoverUser = expressAsyncHandler(async (req, res) => {
 
   const filteredUsers = Users.filter((user) => user._id !== userId);
 
-  res.status(200).json(filteredUsers);
+  res.status(200).json({
+    success: true,
+    message: "Users found successfully",
+    users: filteredUsers,
+  });
 });
 
 export const getUserById = expressAsyncHandler(async (req, res) => {
@@ -213,7 +217,10 @@ export const followUser = expressAsyncHandler(async (req, res) => {
 
   await Promise.all([user.save(), followedUser.save()]);
 
-  res.status(200).json("User followed successfully");
+  res.status(200).json({
+    success: true,
+    message: "User followed successfully",
+  });
 });
 
 export const unFollowUser = expressAsyncHandler(async (req, res) => {
@@ -250,7 +257,10 @@ export const unFollowUser = expressAsyncHandler(async (req, res) => {
 
   await Promise.all([user.save(), followedUser.save()]);
 
-  res.status(200).json("User unfollowed successfully");
+  res.status(200).json({
+    success: true,
+    message: "User unfollowed successfully",
+  });
 });
 
 // admin

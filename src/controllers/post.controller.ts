@@ -88,7 +88,6 @@ export const getFeedPosts = asyncHandler(async (req, res) => {
 
     const uniqueUserIds = [...new Set(userIds)] as string[];
 
-    // ✅ fetch one extra post to check next page
     const posts = await Post.find({ user: { $in: uniqueUserIds } })
         .populate("user", "full_name username profile_picture")
         .sort({ createdAt: -1 })
@@ -117,41 +116,41 @@ export const getFeedPosts = asyncHandler(async (req, res) => {
 });
 
 
-export const likePost = asyncHandler(async (req, res) => {
+export const likePost = asyncHandler(async (req, res): Promise<any>  =>  {
     const { postId } = req.body;
     const userId = req.userId;
 
-    if (!postId) {
-        throw new ApiError(400, "Post id is required");
+    if (!postId || !userId) {
+        throw new ApiError(400, "Post id and User id are required");
     }
 
-    if (!userId) {
-        throw new ApiError(400, "User id is required");
+    const likedPost = await Post.findOneAndUpdate(
+        { _id: postId, likes: { $ne: userId } },
+        { $addToSet: { likes: userId } },
+        { new: true }
+    );
+
+    if (likedPost) {
+        return res.status(200).json({
+            success: true,
+            message: "Post liked successfully",
+            data: likedPost,
+        });
     }
 
-    const post = await Post.findById(postId);
+    const unlikePost = await Post.findOneAndUpdate(
+        { _id: postId },
+        { $pull: { likes: userId } },
+        { new: true }
+    );
 
-    if (!post) {
+    if (!unlikePost) {
         throw new ApiError(404, "Post not found");
     }
 
-    if (post.likes.includes(userId)) {
-        post.likes = post.likes.filter((id) => id !== userId);
-        await post.save();
-        res.status(200).json({
-            success: true,
-            message: "Post unlike successfully",
-            data: post,
-        })
-    } else {
-        post.likes.push(userId);
-    }
-
-    await post.save();
-
-    res.status(200).json({
+    return res.status(200).json({
         success: true,
-        message: "Post liked successfully",
-        data: post,
+        message: "Post unlike successfully",
+        data: unlikePost,
     });
 });

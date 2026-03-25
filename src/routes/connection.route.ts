@@ -6,7 +6,7 @@ const router = Router();
 
 
 router.post("/request", protect, sendConnectionRequest);
-router.get("/connections", protect, getUserConnections);
-router.get("/accept", protect, acceptConnectionRequest);
+router.get("/account", protect, getUserConnections);
+router.post("/accept", protect, acceptConnectionRequest);
 
 export default router;

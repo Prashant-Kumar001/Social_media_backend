@@ -6,7 +6,7 @@ import { upload } from "../config/multer";
 const router = express.Router();
 
 router.use(protect)
-router.post("/add", upload.single("media"), addUserStory)
-router.get("/account/story", getTheStories)
+router.post("/create", upload.single("media"), addUserStory)
+router.get("/account/users", getTheStories)
 
 export default router
