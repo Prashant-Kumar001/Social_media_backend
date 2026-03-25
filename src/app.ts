@@ -31,16 +31,21 @@ connectDB();
 app.use(helmet());
 app.use(
     cors({
-        origin: [
-            process.env.CLIENT_URL as string,
-            process.env.CLIENT_URL_LOCAL as string,
-            "http://localhost:4173",
-        ],
+        origin: (origin, callback) => {
+            const allowed = [
+                process.env.CLIENT_URL,
+                process.env.CLIENT_URL_LOCAL,
+            ];
+
+            if (!origin || allowed.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error("Not allowed by CORS"));
+            }
+        },
         credentials: true,
-        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     })
 );
-
 app.use(express.json());
 app.set("trust proxy", 1);
 app.use(morgan('dev'));
