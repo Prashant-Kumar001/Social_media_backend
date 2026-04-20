@@ -40,7 +40,6 @@ router.get("/", (req, res) => {
             totalMemory: `${(os.totalmem() / 1024 / 1024).toFixed(2)} MB`,
         },
 
-        // 🗄️ Database
         database: {
             status: dbStatusMap[dbState],
             readyState: dbState,

@@ -8,23 +8,30 @@ const createFolder = (folder: string) => {
   }
 };
 
+const baseUploadPath = path.join(process.cwd(), "uploads");
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let uploadPath = "uploads/";
+    let uploadPath = baseUploadPath;
 
-    // Separate folders (clean structure 🔥)
     if (file.mimetype.startsWith("image/")) {
-      uploadPath += "images/";
+      uploadPath = path.join(baseUploadPath, "images");
     } else if (file.mimetype.startsWith("video/")) {
-      uploadPath += "videos/";
+      uploadPath = path.join(baseUploadPath, "videos");
+    } else {
+      uploadPath = path.join(baseUploadPath, "others");
     }
 
     createFolder(uploadPath);
+
+    console.log("Uploading to:", uploadPath);
+
     cb(null, uploadPath);
   },
 
   filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "-" + file.originalname.replace(/\s/g, "");
+    const cleanName = file.originalname.replace(/\s+/g, "");
+    const uniqueName = `${Date.now()}-${cleanName}`;
     cb(null, uniqueName);
   },
 });
@@ -41,7 +48,11 @@ const fileFilter: multer.Options["fileFilter"] = (req, file, cb) => {
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only JPG, PNG, WEBP images and MP4/WEBM videos are allowed"));
+    cb(
+      new Error(
+        "Only JPG, PNG, WEBP images and MP4/WEBM videos are allowed"
+      )
+    );
   }
 };
 
