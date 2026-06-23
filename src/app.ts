@@ -17,7 +17,8 @@ import messageRouter from "./routes/message.route";
 
 import { errorHandler } from "./middlewares/error.middleware";
 import { notFound } from "./middlewares/notFound.middleware";
-import connectDB from "./config/db";
+
+
 
 dotenv.config({
     quiet: true,
@@ -25,7 +26,10 @@ dotenv.config({
 
 const app = express();
 
-connectDB();
+
+
+
+
 
 
 app.use(helmet());

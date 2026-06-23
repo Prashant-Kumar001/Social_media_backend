@@ -17,9 +17,9 @@ export interface IUser {
         url: string;
         fileId: string;
     };
-    followers?: string[];
+    followers: string[];
     following?: string[];
-    connections?: string[];
+    connections: string[];
     posts?: mongoose.Types.ObjectId[];
     is_verified?: boolean;
     role: "user" | "admin";

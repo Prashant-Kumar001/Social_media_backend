@@ -3,6 +3,7 @@ import User from "../models/user.model";
 import { ApiError } from "../utils/ApiError";
 import { Connection } from "../models/connections.model";
 import { inngest } from "../inngest";
+import { client } from "../redis";
 
 export const sendConnectionRequest = asyncHandler(async (req, res) => {
   const userId = req.userId;
@@ -60,9 +61,14 @@ export const sendConnectionRequest = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to send connection request");
 
   await inngest.send({
-      name: "app/connections.requested",
-      data: { connectionId: newConnection._id },
+    name: "app/connections.requested",
+    data: { connectionId: newConnection._id },
   });
+
+  await client.del(`connections:${receiverId}`);
+  await client.del(`connections:${userId}`);
+
+
   res.status(201).json({
     success: true,
     message: "Connection request sent successfully",
@@ -70,37 +76,54 @@ export const sendConnectionRequest = asyncHandler(async (req, res) => {
   });
 });
 
-export const getUserConnections = asyncHandler(async (req, res) => {
-  const userId = req.userId;
+export const getUserConnections = asyncHandler(
+  async (req, res): Promise<any> => {
+    const userId = req.userId;
 
-  if (!userId) throw new ApiError(400, "User ID is required");
+    if (!userId) {
+      throw new ApiError(400, "User ID is required");
+    }
 
-  const user = await User.findById(userId).populate(
-    "connections following followers",
-    "-password",
-  );
+    const cacheKey = `connections:${userId}`;
 
-  const connections = user?.connections;
-  const following = user?.following;
-  const followers = user?.followers;
-  const pending = (
-    await Connection.find({
-      to_user_id: userId,
-      status: "pending",
-    }).populate("from_user_id")
-  ).map((connection) => connection.from_user_id);
+    const cachedConnections = await client.get(cacheKey);
 
-  if (!connections) throw new ApiError(404, "Connections not found");
+    if (cachedConnections) {
+      return res.status(200).json(JSON.parse(cachedConnections));
+    }
 
-  res.status(200).json({
-    success: true,
-    message: "Connections fetched successfully",
-    connections: connections,
-    following: following,
-    followers: followers,
-    pending: pending,
-  });
-});
+    const user = await User.findById(userId).populate(
+      "connections following followers",
+      "-password"
+    );
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    const pending = (
+      await Connection.find({
+        to_user_id: userId,
+        status: "pending",
+      }).populate("from_user_id")
+    ).map((connection) => connection.from_user_id);
+
+    const responseData = {
+      success: true,
+      message: "Connections fetched successfully",
+      connections: user.connections,
+      following: user.following,
+      followers: user.followers,
+      pending,
+    };
+
+    await client.set(cacheKey, JSON.stringify(responseData), {
+      EX: 60 * 60,
+    });
+
+    return res.status(200).json(responseData);
+  }
+);
 
 export const acceptConnectionRequest = asyncHandler(async (req, res) => {
   const userId = req.userId;
@@ -139,6 +162,14 @@ export const acceptConnectionRequest = asyncHandler(async (req, res) => {
 
   connection.status = "accepted";
   await connection.save();
+
+  await client.del(`connections:${userId}`);
+  await client.del(`connections:${senderId}`);
+
+  await inngest.send({
+    name: "app/connections.accepted",
+    data: { connectionId: connection._id },
+  });
 
   res.status(200).json({
     success: true,

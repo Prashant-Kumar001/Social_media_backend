@@ -1,6 +1,6 @@
 import { Router } from "express"
 import { sendMessage, sseController, getChatMessages, getUserResentMessages } from "../controllers/message.controller";
-import { upload } from "../config/multer";
+import  upload from "../config/multer";
 import { protect } from "../middlewares/auth.middleware";
 
 const router = Router();

@@ -1,6 +1,10 @@
 import app from "./app";
+import connectDB from "./config/db";
+import { connectRedis } from "./redis";
 
-app.listen(process.env.PORT, () => {
+app.listen(process.env.PORT, async () => {
+    await connectRedis();
+    await connectDB();
     console.log(`⚡️[server]: Server is running at http://localhost:${process.env.PORT}`);
 });
 

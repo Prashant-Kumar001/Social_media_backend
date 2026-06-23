@@ -1,67 +1,62 @@
 import asyncHandler from "express-async-handler";
 import Post from "../models/post.model";
 import { ApiError } from "../utils/ApiError";
-import client from "../config/imageKit";
-import fs from "fs";
 import User from "../models/user.model";
+import { uploadToCloudinaryFromBuffer } from "../utils/uploadToCloudinary";
+
+
 
 export const addPost = asyncHandler(async (req, res) => {
     const { content, post_type } = req.body;
     const userId = req.userId;
 
-    if (!content) {
-        throw new ApiError(400, "Content is required");
+    const user = await User.findOne({
+        _id: userId,
+    });
+    
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+
+    if (!content && !req.files) {
+        throw new ApiError(400, "Content or images are required");
     }
 
     const files = req.files as {
         [fieldname: string]: Express.Multer.File[];
     };
 
+    const imageFiles = files?.post_image || [];
+    let uploadedImages: { public_id: string; url: string; fileId: string }[] = [];
 
-    const post_images =
-        files?.post_image?.map((file) => ({
-            path: file.path,
-            filename: file.filename,
-        })) || [];
+    if (imageFiles.length > 0) {
+        const uploadPromises = imageFiles.map(async (file) => {
+            const result: any = await uploadToCloudinaryFromBuffer(file.buffer, {
+                folder: "posts",
+            });
 
-    const uploadPromises = post_images.map((img) =>
-        client.files.upload({
-            file: fs.createReadStream(img.path),
-            fileName: `${Date.now()}-${img.filename.replace(/\s/g, "")}`,
-            folder: "/posts",
-            useUniqueFileName: true,
-        }),
-    );
-
-    const uploadedImages = await Promise.all(uploadPromises);
-
-    post_images.forEach((img) => {
-        fs.unlink(img.path, (err) => {
-            if (err) console.error("File delete error:", err);
+            return {
+                public_id: result.public_id,
+                url: result.secure_url,
+                fileId: result.public_id,
+            };
         });
-    });
 
-    const formattedImages = uploadedImages.map((img: any) => ({
-        url: img.url,
-        fileId: img.fileId,
-    }));
+        uploadedImages = await Promise.all(uploadPromises);
+    }
 
     const post = await Post.create({
         content,
         post_type,
-        images: formattedImages,
         user: userId,
+        images: uploadedImages,
     });
 
-    const user = await User.findOne({
-        _id: userId,
-    });
-    if (!user) {
-        throw new ApiError(404, "User not found");
-    }
 
     user.posts?.push(post._id);
     await user.save();
+
 
     res.status(201).json({
         success: true,
@@ -74,7 +69,7 @@ export const getFeedPosts = asyncHandler(async (req, res) => {
     const userId = req.userId;
 
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(20, parseInt(req.query.limit as string) || 10); 
+    const limit = Math.min(20, parseInt(req.query.limit as string) || 10);
     const skip = (page - 1) * limit;
 
     const user = await User.findById(userId).select("connections following").lean();
@@ -84,7 +79,7 @@ export const getFeedPosts = asyncHandler(async (req, res) => {
         ...(user?.connections || []),
         ...(user?.following || []),
     ];
-    
+
 
     const uniqueUserIds = [...new Set(userIds)] as string[];
 
@@ -92,7 +87,7 @@ export const getFeedPosts = asyncHandler(async (req, res) => {
         .populate("user", "full_name username profile_picture")
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit + 1) 
+        .limit(limit + 1)
         .lean();
 
     const hasNextPage = posts.length > limit;
@@ -116,7 +111,7 @@ export const getFeedPosts = asyncHandler(async (req, res) => {
 });
 
 
-export const likePost = asyncHandler(async (req, res): Promise<any>  =>  {
+export const likePost = asyncHandler(async (req, res): Promise<any> => {
     const { postId } = req.body;
     const userId = req.userId;
 

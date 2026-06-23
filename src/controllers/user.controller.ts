@@ -1,14 +1,16 @@
 import expressAsyncHandler from "express-async-handler";
 import { ApiError } from "../utils/ApiError";
 import User from "../models/user.model";
-import {
-  deleteFromImageKit,
-  uploadToImageKit,
-} from "../utils/uploadFileToTheImageKit";
+
 import Post from "../models/post.model";
+import { clerkClient } from "@clerk/express";
+import { uploadToCloudinary } from "../utils/uploadToCloudinary";
+import { deleteFromCloudinary } from "../utils/deleteFromCloudinary";
+import { client } from "../redis";
 
 export const updateUserData = expressAsyncHandler(async (req, res) => {
   const userId = req.userId;
+
 
   const allowedFields = ["location", "full_name", "bio", "username"];
 
@@ -56,17 +58,17 @@ export const updateUserData = expressAsyncHandler(async (req, res) => {
   let coverData: { url: string; fileId: string } | null = null;
 
   if (profile) {
-    profileData = await uploadToImageKit({
-      file: profile,
-      folder: "profile",
-    });
+    profileData = await uploadToCloudinary(
+      profile.buffer,
+      "users/profile"
+    );
   }
 
   if (cover) {
-    coverData = await uploadToImageKit({
-      file: cover,
-      folder: "cover",
-    });
+    coverData = await uploadToCloudinary(
+      cover.buffer,
+      "users/cover"
+    );
   }
 
   const updateData: Partial<{
@@ -96,31 +98,34 @@ export const updateUserData = expressAsyncHandler(async (req, res) => {
 
   if (profileData) {
     if (user.profile_picture?.fileId) {
-      await deleteFromImageKit(user.profile_picture.fileId);
+      await deleteFromCloudinary(user.profile_picture.fileId);
     }
 
-    updateData.profile_picture = {
-      url: profileData.url,
-      fileId: profileData.fileId,
-    };
+    updateData.profile_picture = profileData;
+
   }
 
   if (coverData) {
     if (user.cover_photo?.fileId) {
-      await deleteFromImageKit(user.cover_photo.fileId);
+      await deleteFromCloudinary(user.cover_photo.fileId);
     }
 
-    updateData.cover_photo = {
-      url: coverData.url,
-      fileId: coverData.fileId,
-    };
+    updateData.cover_photo = coverData;
   }
+
 
   const updatedUser = await User.findByIdAndUpdate(
     userId,
-    { $set: updateData },
-    { new: true, runValidators: true },
+    {
+      $set: updateData,
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
   );
+
+  await client.del(`userData:${userId}`);
 
   res.status(200).json({
     success: true,
@@ -129,24 +134,86 @@ export const updateUserData = expressAsyncHandler(async (req, res) => {
   });
 });
 
-export const getUserData = expressAsyncHandler(async (req, res) => {
+export const getUserData = expressAsyncHandler(async (req, res): Promise<any> => {
   const userId = req.userId;
+
   if (!userId) {
     throw new ApiError(400, "User id is required");
-  } 
-
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new ApiError(404, "User not found");
   }
-  res.status(200).json({
+
+  const cacheKey = `userData:${userId}`;
+
+  const cachedUser = await client.get(cacheKey);
+
+  if (cachedUser) {
+    return res.status(200).json(JSON.parse(cachedUser));
+  }
+
+  let user = await User.findById(userId);
+
+  if (!user) {
+    const clerkUser = await clerkClient.users.getUser(userId);
+
+    const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+
+    if (!email) {
+      throw new ApiError(400, "Email address not found");
+    }
+
+    let username = email.split("@")[0];
+
+    const existingUser = await User.findOne({ username });
+
+    if (existingUser) {
+      username += Math.floor(Math.random() * 1000);
+    }
+
+    user = await User.create({
+      _id: clerkUser.id,
+      username,
+      full_name: `${clerkUser.firstName ?? ""} ${
+        clerkUser.lastName ?? ""
+      }`.trim(),
+      profile_picture: {
+        url: clerkUser.imageUrl,
+        fileId: "",
+      },
+      email,
+      bio: "write something about yourself",
+      location: "",
+      cover_photo: {
+        url: "",
+        fileId: "",
+      },
+    });
+
+    const responseData = {
+      success: true,
+      data: user,
+      message: "User created successfully",
+    };
+
+    await client.set(cacheKey, JSON.stringify(responseData), {
+      EX: 60 * 60,
+    });
+
+    return res.status(201).json(responseData);
+  }
+
+  const responseData = {
     success: true,
     message: "User found successfully",
     user,
+  };
+
+  await client.set(cacheKey, JSON.stringify(responseData), {
+    EX: 60 * 60,
   });
+
+  return res.status(200).json(responseData);
 });
 
-export const discoverUser = expressAsyncHandler(async (req, res) => {
+export const discoverUser = expressAsyncHandler(async (req, res): Promise<any> => {
   const userId = req.userId;
   const { input } = req.query as { input: string };
 
@@ -168,19 +235,45 @@ export const discoverUser = expressAsyncHandler(async (req, res) => {
   });
 });
 
-export const getUserById = expressAsyncHandler(async (req, res) => {
+export const getUserById = expressAsyncHandler(async (req, res): Promise<any> => {
   const userId = req.params.id;
+
+  if (!userId) {
+    throw new ApiError(400, "User id is required");
+  }
+
+  const cacheKey = `userProfile:${userId}`;
+
+  const cachedData = await client.get(cacheKey);
+
+  if (cachedData) {
+    console.log("Cache hit");
+    return res.status(200).json(JSON.parse(cachedData));
+  }
+  console.log("Cache miss");
   const [user, posts] = await Promise.all([
     User.findById(userId),
-    Post.find({ user: userId }).sort({ createdAt: -1 }).populate("user"),
-  ])
+    Post.find({ user: userId })
+      .sort({ createdAt: -1 })
+      .populate("user"),
+  ]);
+
   if (!user) {
     throw new ApiError(404, "User not found");
   }
-  if (!posts) {
-    throw new ApiError(404, "Posts not found");
-  }
-  res.status(200).json({ success: true, message: "User found successfully", user, posts });
+
+  const responseData = {
+    success: true,
+    message: "User found successfully",
+    user,
+    posts,
+  };
+
+  await client.set(cacheKey, JSON.stringify(responseData), {
+    EX: 60 * 60,
+  });
+
+  return res.status(200).json(responseData);
 });
 
 export const followUser = expressAsyncHandler(async (req, res) => {
@@ -263,7 +356,6 @@ export const unFollowUser = expressAsyncHandler(async (req, res) => {
   });
 });
 
-// admin
 export const getAllUsers = expressAsyncHandler(async (req, res) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;

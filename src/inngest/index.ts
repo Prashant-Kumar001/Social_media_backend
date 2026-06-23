@@ -12,70 +12,73 @@ export const inngest = new Inngest({
   eventKey: process.env.INNGEST_EVENT_KEY,
 });
 
-const syncUserCreation = inngest.createFunction(
-  { id: "sync-user-creation", triggers: [{ event: "clerk/user.created" }] },
+// const syncUserCreation = inngest.createFunction(
+//   { id: "sync-user-creation", triggers: [{ event: "clerk/user.created" }] },
 
-  async ({ event }) => {
-    const { id, first_name, last_name, email_addresses, image_url } =
-      event.data;
+//   async ({ event }) => {
+//     const { id, first_name, last_name, email_addresses, image_url } =
+//       event.data;
 
-    const email = email_addresses?.[0]?.email_address;
+//     const email = email_addresses?.[0]?.email_address;
 
-    if (!email) {
-      throw new Error("Email not found in Clerk payload");
-    }
+//     if (!email) {
+//       throw new Error("Email not found in Clerk payload");
+//     }
 
-    let username = email.split("@")[0];
+//     let username = email.split("@")[0];
 
-    const existingUser = await User.findOne({ username });
-    if (existingUser) {
-      username = username + Math.floor(Math.random() * 1000);
-    }
+//     const existingUser = await User.findOne({ username });
+//     if (existingUser) {
+//       username = username + Math.floor(Math.random() * 1000);
+//     }
 
-    const userData = {
-      _id: id,
-      email,
-      full_name: `${first_name || ""} ${last_name || ""}`,
-      username,
-      profile_picture: {
-        url: image_url,
-        fileId: "",
-      },
-      bio: "write your bio here",
-    };
+//     const userData = {
+//       _id: id,
+//       email,
+//       full_name: `${first_name || ""} ${last_name || ""}`,
+//       username,
+//       profile_picture: {
+//         url: image_url,
+//         fileId: "",
+//       },
+//       bio: "write your bio here",
+//     };
 
-    await User.create(userData);
-  },
-);
+//     await User.create(userData);
+//   },
+// );
 
-const syncUserUpdation = inngest.createFunction(
-  { id: "sync-user-updation", triggers: [{ event: "clerk/user.updated" }] },
+// const syncUserUpdation = inngest.createFunction(
+//   { id: "sync-user-updation", triggers: [{ event: "clerk/user.updated" }] },
 
-  async ({ event }) => {
-    const { id, first_name, last_name, email_addresses, image_url } =
-      event.data;
+//   async ({ event }) => {
+//     const { id, first_name, last_name, email_addresses, image_url } =
+//       event.data;
 
-    const email = email_addresses?.[0]?.email_address;
+//     const email = email_addresses?.[0]?.email_address;
 
-    await User.findOneAndUpdate(
-      { _id: id },
-      {
-        email,
-        full_name: `${first_name || ""} ${last_name || ""}`,
-        profile_picture: image_url,
-      },
-    );
-  },
-);
+//     await User.findOneAndUpdate(
+//       { _id: id },
+//       {
+//         email,
+//         full_name: `${first_name || ""} ${last_name || ""}`,
+//         profile_picture: image_url,
+//       },
+//     );
+//   },
+// );
 
-const syncUserDeletion = inngest.createFunction(
-  { id: "sync-user-deletion", triggers: [{ event: "clerk/user.deleted" }] },
+// const syncUserDeletion = inngest.createFunction(
+//   { id: "sync-user-deletion", triggers: [{ event: "clerk/user.deleted" }] },
 
-  async ({ event }) => {
-    const { id } = event.data;
-    await User.findOneAndDelete({ _id: id });
-  },
-);
+//   async ({ event }) => {
+//     const { id } = event.data;
+//     await User.findOneAndDelete({ _id: id });
+//   },
+// );
+
+
+
 
 const sendConnectionsRequestReminder = inngest.createFunction(
   {
@@ -186,7 +189,7 @@ const sendConnectionsRequestReminder = inngest.createFunction(
 
           <div style="margin-top: 20px;">
             <a 
-              href="${process.env.CLIENT_URL}/connections"
+              href="${process.env.CLIENT_URL_LOCAL}/connections"
               style="
                 background-color: #4CAF50;
                 color: white;
@@ -221,8 +224,65 @@ const sendConnectionsRequestReminder = inngest.createFunction(
   },
 );
 
+const sendNotificationOnConnectionRequestAccepct = inngest.createFunction(
+  {
+    id: "send-notification-on-connection-request-accept",
+    triggers: [{ event: "app/connections.accepted" }],
+  },
+  async ({ event }) => {
+    const { connectionId } = event.data;
+    const connection = await Connection.findById(connectionId).populate(
+      "from_user_id to_user_id",
+    );
+
+    if (!connection) {
+      throw new Error("Connection not found");
+    }
+
+    const fromUser = connection.from_user_id as any;
+    const toUser = connection.to_user_id as any;
+
+    const subject = `🔔 Connection Request Accepted`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Hey ${toUser?.full_name || "there"} 👋</h2>
+
+        <p>
+          Your connection request from 
+          <strong>${fromUser?.full_name || "someone"}</strong> has been accepted.
+        </p>
+
+        <div style="margin-top: 20px;">
+          <a 
+            href="${process.env.CLIENT_URL_LOCAL}/connections"
+            style="
+              background-color: #4CAF50;
+              color: white;
+              padding: 10px 16px;
+              text-decoration: none;
+              border-radius: 5px;
+              display: inline-block;
+            "
+          >
+            View Connections
+          </a>
+        </div>
+      </div>
+    `;
+
+    await sendMail({
+      to: toUser?.email,
+      subject,
+      html,
+    });
+
+    return { success: true };
+  },
+)
+
 const in24DeleteStory = inngest.createFunction(
-  { id: "story-delete", triggers: [{ event: "app/story.deleted" }] },
+  { id: "story-creaete", triggers: [{ event: "app/story.created" }] },
   async ({ event, step }) => {
     const { storyId } = event.data;
     const in24Hours = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
@@ -241,7 +301,7 @@ const sendNotificationsOnUnseenMessages = inngest.createFunction(
   {
     id: "send-notifications-on-unseen-messages",
     triggers: [{ event: "app/unseen-messages" }, {
-      cron: "TZ=America/New_York 0 9 * * *", // 
+      cron: "TZ=America/New_York 0 9 * * *", 
     }],
   },
   async ({ step }) => {
@@ -307,10 +367,8 @@ const sendNotificationsOnUnseenMessages = inngest.createFunction(
 )
 
 export const functions = [
-  syncUserCreation,
-  syncUserUpdation,
-  syncUserDeletion,
   sendConnectionsRequestReminder,
+  sendNotificationOnConnectionRequestAccepct,
   in24DeleteStory,
   sendNotificationsOnUnseenMessages
 ];

@@ -1,5 +1,5 @@
 import express from "express";
-import { upload } from "../config/multer";
+import  upload  from "../config/multer";
 
 import { adminOnly, protect } from "../middlewares/auth.middleware";
 import { addPost, getFeedPosts, likePost } from "../controllers/post.controller";
